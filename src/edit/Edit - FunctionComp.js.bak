@@ -1,0 +1,143 @@
+import React, { useEffect, useState } from 'react'
+import TextField from '@material-ui/core/TextField';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Checkbox from '@material-ui/core/Checkbox';
+import { connect } from "react-redux";
+import { addBookAsync, editBook, db } from '../store/actions'
+import { toastr } from 'react-redux-toastr'
+import 'react-redux-toastr/lib/css/react-redux-toastr.min.css'
+import Button from '@material-ui/core/Button';
+import { Link } from 'react-router-dom';
+import { store } from '../App'
+
+
+function Edit(props) {
+
+  /*constructor(props) {
+
+    super(props);
+    state = {
+
+      name: '',
+      available: 0,
+      authors: '',
+      description: '',
+      visible: false,
+    }
+    //handleChange = handleChange.bind(this);
+    sortedIds = []
+  }*/
+
+  //idGenerator() { return (Math.random().toString(36).substring(2) + (new Date()).getTime().toString(36)) }
+
+  const [state, setState] = useState({})
+  const [sortedIds, setSortedIds] = useState([])
+  useEffect(() => {
+    if (props.match.params.id == 0) { setState({ name: '', available: 0, authors: '', description: '', visible: false }); return }
+    setSortedIds(store.getState().books.map((item) => item.id));
+  }, []);
+  useEffect(() => {
+    if (!(props.match.params.id == 0)) { setState({ ...props.book }); return }
+  }, [props.match.params.id])
+  //delete state.id;
+
+  const handleChange = name => event => {
+    setState({ ...state, [name]: event.target.value });//error here
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (props.match.params.id == 0) {
+      props.addBook(state);
+
+      toastr.success(state.name, 'A new book has been added successfully.');
+      setState({ name: '', available: 0, authors: '', description: '', visible: false }); return;
+    }
+    db.collection('Book').doc(props.match.params.id).update(state);
+    props.editBook(props.match.params.id, state);
+    toastr.success(state.name, 'This book has beed edited successfully.')
+  }
+
+
+
+
+  const l = sortedIds.length;
+  let i = sortedIds.findIndex((item) => item == props.match.params.id);
+  const idGrabber = (which) => {
+    if (i >= 0 && i <= l - 1) {
+      return sortedIds[i + which]
+    }
+  }
+
+  return <div style={{ paddingTop: '30px' }}>
+    <form noValidate>
+
+      <TextField
+        id="book-name"
+        label="Name"
+        value={state.name}
+        onChange={handleChange('name')}
+        margin="normal"
+        fullWidth
+        variant="outlined"
+      />
+      <TextField
+        id="book-available"
+        label="Available"
+        type="number"
+        value={state.available}
+        onChange={e => setState({ ...state, available: parseInt(e.target.value) })}
+        margin="normal"
+        fullWidth
+        variant="outlined"
+      />
+      <TextField
+        id="book-authors"
+        label="Authors"
+        value={state.authors}
+        onChange={handleChange('authors')}
+        margin="normal"
+        fullWidth
+        variant="outlined"
+      />
+      <TextField
+        id="book-description"
+        label="Description"
+        multiline
+        value={state.description}
+        onChange={handleChange('description')}
+        margin="normal"
+        fullWidth
+        variant="outlined"
+      />
+      <FormControlLabel
+        control={<Checkbox onChange={() => { setState({ ...state, visible: !state.visible }) }} checked={state.visible} />}
+        label="Visible"
+      /><br />
+      <Button variant="contained" onClick={(e) => { handleSubmit(e); }} type='submit' color="primary">Submit</Button>
+      {!(props.match.params.id == 0) && <div style={{ float: 'right', display: 'inline-block' }}>
+        <Link className={i ? null : 'disabled-link'} style={{ marginRight: '30px' }} to={'/edit/' + idGrabber(-1)}><Button onClick={() => console.log('previous')} variant="outlined" disabled={!i}>Previous</Button></Link>
+        <Link className={(i + 1 - l) ? null : 'disabled-link'} to={'/edit/' + idGrabber(1)}><Button variant="outlined" disabled={!(i + 1 - l)}>Next</Button></Link>
+      </div>}
+
+
+    </form>
+  </div>
+}
+const mapState = (state, ownProps) => {
+  //let entery={};
+  if (!(ownProps.match.params.id == 0)) {
+    //entery = statex.books.find((item) => item.id == ownProps.match.params.id);
+    //let { id, ...book } = entery;
+    return {
+      book: state.books.find((item) => item.id == ownProps.match.params.id),
+      //id
+      //sortedIds: state.books.map((item) => item.id)
+    }
+  }
+}
+const mapDispatch = {
+  addBook: addBookAsync,
+  editBook//: editBookAsync
+}
+export default connect(mapState, mapDispatch)(Edit)
